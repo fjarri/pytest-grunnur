@@ -1,7 +1,7 @@
 [project]
 name = "pytest_grunnur"
 version = "0.1.0"
-description = "Uniform API for PyOpenCL and PyCUDA."
+description = "Py.Test plugin for Grunnur-based packages."
 authors = [
     {name = "Bogdan Opanchuk", email = "bogdan@opanchuk.net"},
 ]

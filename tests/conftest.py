@@ -14,12 +14,19 @@ from grunnur.testing import (
 
 # Cannot just use the plugin directly since it is loaded before the coverage plugin,
 # and all the function definitions in all `grunnur` modules get marked as not covered.
-from pytest_grunnur.plugin import (
-    context,
-    some_context,
-    multi_device_context,
+from pytest_grunnur import (
     get_devices,
     get_multi_device_sets,
+)
+from pytest_grunnur.plugin import (
+    api,
+    platform,
+    device,
+    context,
+    some_device,
+    some_context,
+    multi_device_set,
+    multi_device_context,
 )
 
 from pytest_grunnur.plugin import pytest_addoption as grunnur_pytest_addoption

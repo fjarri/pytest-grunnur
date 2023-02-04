@@ -7,6 +7,19 @@ from grunnur import API, all_api_ids, Platform, PlatformFilter, Device, DeviceFi
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
+    """
+    Adds the following command-line options:
+
+    * ``--api``: select a specific API to test (out of returned by :py:func:`grunnur.all_api_ids`).
+    * ``--platform-include-mask``: run tests only on platforms whose names matches the mask.
+    * ``--platform-exclude-mask``: exclude platforms whose names matches the mask from the tests.
+    * ``--device-include-mask``: run tests only on devices whose names matches the mask.
+    * ``--device-exclude-mask``: exclude devices whose names matches the mask from the tests.
+    * ``--include-duplicate-devices``: if there are devices with the same name in the platform,
+      run tests on all of them.
+    * ``--include-pure-parallel-devices``: include pure parallel devices in the tests
+      (that is, those not supporting synchronization within a block/work group).
+    """
 
     api_shortcuts = [api_id.shortcut for api_id in all_api_ids()]
     parser.addoption(
@@ -60,6 +73,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 @lru_cache()
 def get_apis(config: pytest.Config) -> List[API]:
+    """
+    Returns the list of APIs filtered by the test configuration.
+    """
     return API.all_by_shortcut(config.option.api)
 
 
@@ -72,6 +88,10 @@ def concatenate(lists: Iterable[List[_T]]) -> List[_T]:
 
 @lru_cache()
 def get_platforms(config: pytest.Config) -> List[Platform]:
+    """
+    Returns the list of platforms filtered by the test configuration
+    (concatenated for all filtered APIs).
+    """
     apis = get_apis(config)
     return concatenate(
         Platform.all_filtered(
@@ -89,7 +109,6 @@ def get_platforms(config: pytest.Config) -> List[Platform]:
 def get_device_sets(
     config: pytest.Config, unique_devices_only_override: Optional[bool] = None
 ) -> List[List[Device]]:
-
     if unique_devices_only_override is not None:
         unique_devices_only = unique_devices_only_override
     else:
@@ -112,37 +131,99 @@ def get_device_sets(
 
 @lru_cache()
 def get_devices(config: pytest.Config) -> List[Device]:
+    """
+    Returns the list of devices filtered by the test configuration
+    (concatenated for all filtered platforms and APIs).
+    """
     return concatenate(get_device_sets(config))
 
 
 @lru_cache()
 def get_multi_device_sets(config: pytest.Config) -> List[List[Device]]:
+    """
+    Returns a list where each element is a list with two or more devices
+    belonging to the same API and platform, where APIs, platforms, and devices
+    are filtered by the test configuration.
+    """
     device_sets = get_device_sets(config, unique_devices_only_override=False)
     return [device_set for device_set in device_sets if len(device_set) > 1]
 
 
 @pytest.fixture
+def api(request: pytest.FixtureRequest) -> Iterator[API]:
+    """
+    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_apis`.
+    """
+    yield request.param
+
+
+@pytest.fixture
+def platform(request: pytest.FixtureRequest) -> Iterator[Platform]:
+    """
+    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_platforms`.
+    """
+    yield request.param
+
+
+@pytest.fixture
+def device(request: pytest.FixtureRequest) -> Iterator[Device]:
+    """
+    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_devices`.
+    """
+    yield request.param
+
+
+@pytest.fixture
 def context(device: Device) -> Iterator[Context]:
+    """
+    A single-device context for each device yielded by :py:func:`~pytest_grunnur.plugin.device`.
+    """
     yield Context.from_devices([device])
 
 
 @pytest.fixture
+def some_device(request: pytest.FixtureRequest) -> Iterator[Device]:
+    """
+    Yields one element of the return value of :py:func:`~pytest_grunnur.get_devices`.
+    """
+    yield request.param
+
+
+@pytest.fixture
 def some_context(some_device: Device) -> Iterator[Context]:
+    """
+    A single-device context initialized with the return value of
+    :py:func:`~pytest_grunnur.plugin.some_device`.
+    """
     yield Context.from_devices([some_device])
 
 
 @pytest.fixture
-def multi_device_context(device_set: List[Device]) -> Iterator[Context]:
-    yield Context.from_devices(device_set)
+def multi_device_set(request: pytest.FixtureRequest) -> Iterator[List[Device]]:
+    """
+    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_multi_device_sets`.
+    """
+    yield request.param
+
+
+@pytest.fixture
+def multi_device_context(multi_device_set: List[Device]) -> Iterator[Context]:
+    """
+    A multi-device context for each device set yielded by
+    :py:func:`~pytest_grunnur.plugin.multi_device_set`.
+    """
+    yield Context.from_devices(multi_device_set)
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """
+    Seeds the parameters for the fixtures provided by this plugin
+    (see the fixture list for details).
+    """
 
     apis = get_apis(metafunc.config)
     platforms = get_platforms(metafunc.config)
     devices = get_devices(metafunc.config)
-
-    api_ids = [api.id for api in apis]
 
     fixtures: List[Tuple[str, List[Any]]] = [
         ("api", apis),
@@ -156,6 +237,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 name,
                 vals,
                 ids=["no_" + name] if len(vals) == 0 else lambda obj: cast(str, obj.shortcut),
+                indirect=True,
             )
 
     if "some_device" in metafunc.fixturenames:
@@ -163,17 +245,25 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             "some_device",
             devices if len(devices) == 0 else [devices[0]],
             ids=["no_device"] if len(devices) == 0 else lambda device: cast(str, device.shortcut),
+            indirect=True,
         )
 
-    if "device_set" in metafunc.fixturenames:
+    if "multi_device_set" in metafunc.fixturenames:
         device_sets = get_multi_device_sets(metafunc.config)
         ids = ["+".join(device.shortcut for device in device_set) for device_set in device_sets]
         metafunc.parametrize(
-            "device_set", device_sets, ids=["no_multi_device"] if len(device_sets) == 0 else ids
+            "multi_device_set",
+            device_sets,
+            ids=["no_multi_device"] if len(device_sets) == 0 else ids,
+            indirect=True,
         )
 
 
 def pytest_report_header(config: pytest.Config) -> None:
+    """
+    Adds a header to the test report, listing all the GPGPU devices the tests are run on,
+    including their short numerical IDs (appearing in the test parameters).
+    """
     devices = get_devices(config)
 
     if len(devices) == 0:

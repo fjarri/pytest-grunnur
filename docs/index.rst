@@ -78,6 +78,12 @@ Current development version
 Under construction.
 
 
+0.2.0 (4 Feb 2023)
+------------------
+
+All the fixtures are now explicitly defined.
+
+
 0.1.0 (29 Jan 2023)
 -------------------
 

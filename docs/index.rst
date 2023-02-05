@@ -72,8 +72,8 @@ Version history
 ===============
 
 
-Current development version
----------------------------
+0.2.2 (Unreleased)
+------------------
 
 Under construction.
 

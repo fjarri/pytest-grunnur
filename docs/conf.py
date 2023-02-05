@@ -12,9 +12,9 @@
 #
 import os
 import sys
+from importlib.metadata import version, PackageNotFoundError
 
 import setuptools_scm
-from numpy.typing import DTypeLike
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -26,8 +26,12 @@ copyright = "2023–now, Bogdan Opanchuk"
 author = "Bogdan Opanchuk"
 
 # The full version, including alpha/beta/rc tags
-release = setuptools_scm.get_version(relative_to=os.path.abspath("../pyproject.toml"))
+try:
+    release = version(project)
+except PackageNotFoundError:
+    release = setuptools_scm.get_version(relative_to=os.path.abspath("../pyproject.toml"))
 
+version = ".".join(release.split(".")[:3])
 
 # -- General configuration ---------------------------------------------------
 
@@ -42,7 +46,6 @@ extensions = [
 
 autoclass_content = "both"
 autodoc_member_order = "groupwise"
-autodoc_type_aliases = dict(DTypeLike="DTypeLike")
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

@@ -1,6 +1,6 @@
 [project]
 name = "pytest_grunnur"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Py.Test plugin for Grunnur-based packages."
 authors = [
     {name = "Bogdan Opanchuk", email = "bogdan@opanchuk.net"},
@@ -37,9 +37,11 @@ pytest_grunnur = "pytest_grunnur.plugin"
 line-length = 100
 target-version = ['py38']
 
+[tool.pdm]
+version = { source = "scm" }
+
 [tool.pdm.build]
 source-includes = [
-    "**/*.pyi",
     "tests/*.py",
     "docs/*.rst",
     "docs/*.py",
@@ -47,12 +49,14 @@ source-includes = [
     "docs/Makefile",
     ".coveragerc",
     ".mypy.ini",
-    ".readthedocs.yml",
     "pytest.ini",
 ]
 
 [tool.setuptools_scm]
 
 [build-system]
-requires = ["pdm-pep517"]
+requires = [
+    "pdm-pep517",
+    "setuptools_scm[toml]>=7",
+]
 build-backend = "pdm.pep517.api"

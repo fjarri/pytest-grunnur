@@ -75,7 +75,10 @@ Version history
 Current development version
 ---------------------------
 
-Under construction.
+Fixed
+^^^^^
+
+- Switched back to static versioning.
 
 
 0.2.0 (4 Feb 2023)

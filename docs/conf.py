@@ -12,7 +12,7 @@
 #
 import os
 import sys
-from importlib.metadata import version, PackageNotFoundError
+import importlib.metadata
 
 import setuptools_scm
 
@@ -27,11 +27,9 @@ author = "Bogdan Opanchuk"
 
 # The full version, including alpha/beta/rc tags
 try:
-    release = version(project)
-except PackageNotFoundError:
+    release = importlib.metadata.version(project)
+except importlib.metadata.PackageNotFoundError:
     release = setuptools_scm.get_version(relative_to=os.path.abspath("../pyproject.toml"))
-
-version = ".".join(release.split(".")[:3])
 
 # -- General configuration ---------------------------------------------------
 

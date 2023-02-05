@@ -1,6 +1,6 @@
 [project]
 name = "pytest_grunnur"
-version = "0.2.1.dev"
+version = "0.2.1"
 description = "Py.Test plugin for Grunnur-based packages."
 authors = [
     {name = "Bogdan Opanchuk", email = "bogdan@opanchuk.net"},

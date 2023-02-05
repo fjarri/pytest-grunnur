@@ -72,8 +72,8 @@ Version history
 ===============
 
 
-Current development version
----------------------------
+0.2.1 (5 Feb 2023)
+------------------
 
 Fixed
 ^^^^^

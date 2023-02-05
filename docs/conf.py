@@ -16,8 +16,6 @@ import importlib.metadata
 
 import setuptools_scm
 
-sys.path.insert(0, os.path.abspath("../"))
-
 
 # -- Project information -----------------------------------------------------
 

@@ -72,10 +72,16 @@ Version history
 ===============
 
 
-0.2.2 (Unreleased)
+0.3.0 (Unreleased)
 ------------------
 
-Under construction.
+Changed
+^^^^^^^
+
+- Bumped Python version to 3.10. (PR_1_)
+
+
+.. _PR_1: https://github.com/fjarri/pytest-grunnur/pull/1
 
 
 0.2.1 (5 Feb 2023)

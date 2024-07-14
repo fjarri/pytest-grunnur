@@ -1,9 +1,9 @@
-from functools import lru_cache
-from typing import Iterable, TypeVar, Optional, List, Iterator, Any, Tuple, cast
+from collections.abc import Iterable
+from functools import lru_cache, reduce
+from typing import Any, TypeVar, cast
 
 import pytest
-
-from grunnur import API, all_api_ids, Platform, PlatformFilter, Device, DeviceFilter, Context
+from grunnur import API, Context, Device, DeviceFilter, Platform, PlatformFilter, all_api_ids
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -20,7 +20,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     * ``--include-pure-parallel-devices``: include pure parallel devices in the tests
       (that is, those not supporting synchronization within a block/work group).
     """
-
     api_shortcuts = [api_id.shortcut for api_id in all_api_ids()]
     parser.addoption(
         "--api",
@@ -71,29 +70,27 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-@lru_cache()
-def get_apis(config: pytest.Config) -> List[API]:
-    """
-    Returns the list of APIs filtered by the test configuration.
-    """
+@lru_cache
+def get_apis(config: pytest.Config) -> list[API]:
+    """Returns the list of APIs filtered by the test configuration."""
     return API.all_by_shortcut(config.option.api)
 
 
 _T = TypeVar("_T")
 
 
-def concatenate(lists: Iterable[List[_T]]) -> List[_T]:
-    return sum(lists, [])
+def _concatenate(lists: Iterable[list[_T]]) -> list[_T]:
+    return reduce(lambda x, y: x + y, lists, [])
 
 
-@lru_cache()
-def get_platforms(config: pytest.Config) -> List[Platform]:
+@lru_cache
+def get_platforms(config: pytest.Config) -> list[Platform]:
     """
     Returns the list of platforms filtered by the test configuration
     (concatenated for all filtered APIs).
     """
     apis = get_apis(config)
-    return concatenate(
+    return _concatenate(
         Platform.all_filtered(
             api,
             PlatformFilter(
@@ -105,10 +102,10 @@ def get_platforms(config: pytest.Config) -> List[Platform]:
     )
 
 
-@lru_cache()
-def get_device_sets(
-    config: pytest.Config, unique_devices_only_override: Optional[bool] = None
-) -> List[List[Device]]:
+@lru_cache
+def _get_device_sets(
+    config: pytest.Config, unique_devices_only_override: bool | None = None
+) -> list[list[Device]]:
     if unique_devices_only_override is not None:
         unique_devices_only = unique_devices_only_override
     else:
@@ -129,90 +126,89 @@ def get_device_sets(
     ]
 
 
-@lru_cache()
-def get_devices(config: pytest.Config) -> List[Device]:
+@lru_cache
+def get_devices(config: pytest.Config) -> list[Device]:
     """
     Returns the list of devices filtered by the test configuration
     (concatenated for all filtered platforms and APIs).
     """
-    return concatenate(get_device_sets(config))
+    return _concatenate(_get_device_sets(config))
 
 
-@lru_cache()
-def get_multi_device_sets(config: pytest.Config) -> List[List[Device]]:
+@lru_cache
+def get_multi_device_sets(config: pytest.Config) -> list[list[Device]]:
     """
     Returns a list where each element is a list with two or more devices
     belonging to the same API and platform, where APIs, platforms, and devices
     are filtered by the test configuration.
     """
-    device_sets = get_device_sets(config, unique_devices_only_override=False)
+    device_sets = _get_device_sets(config, unique_devices_only_override=False)
     return [device_set for device_set in device_sets if len(device_set) > 1]
 
 
-@pytest.fixture
-def api(request: pytest.FixtureRequest) -> Iterator[API]:
-    """
-    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_apis`.
-    """
-    yield request.param
+@pytest.fixture()
+def api(request: pytest.FixtureRequest) -> API:
+    """Yields the elements of the return value of :py:func:`~pytest_grunnur.get_apis`."""
+    # Set in `pytest_generate_tests()`
+    return cast(API, request.param)
 
 
-@pytest.fixture
-def platform(request: pytest.FixtureRequest) -> Iterator[Platform]:
-    """
-    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_platforms`.
-    """
-    yield request.param
+@pytest.fixture()
+def platform(request: pytest.FixtureRequest) -> Platform:
+    """Yields the elements of the return value of :py:func:`~pytest_grunnur.get_platforms`."""
+    # Set in `pytest_generate_tests()`
+    return cast(Platform, request.param)
 
 
-@pytest.fixture
-def device(request: pytest.FixtureRequest) -> Iterator[Device]:
-    """
-    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_devices`.
-    """
-    yield request.param
+@pytest.fixture()
+def device(request: pytest.FixtureRequest) -> Device:
+    """Yields the elements of the return value of :py:func:`~pytest_grunnur.get_devices`."""
+    # Set in `pytest_generate_tests()`
+    return cast(Device, request.param)
 
 
-@pytest.fixture
-def context(device: Device) -> Iterator[Context]:
+@pytest.fixture()
+def context(device: Device) -> Context:
     """
-    A single-device context for each device yielded by :py:func:`~pytest_grunnur.plugin.device`.
+    A single-device context for each device yielded by
+    :py:func:`~pytest_grunnur.plugin.device`.
     """
-    yield Context.from_devices([device])
+    return Context.from_devices([device])
 
 
-@pytest.fixture
-def some_device(request: pytest.FixtureRequest) -> Iterator[Device]:
-    """
-    Yields one element of the return value of :py:func:`~pytest_grunnur.get_devices`.
-    """
-    yield request.param
+@pytest.fixture()
+def some_device(request: pytest.FixtureRequest) -> Device:
+    """Yields one element of the return value of :py:func:`~pytest_grunnur.get_devices`."""
+    # Set in `pytest_generate_tests()`
+    return cast(Device, request.param)
 
 
-@pytest.fixture
-def some_context(some_device: Device) -> Iterator[Context]:
+@pytest.fixture()
+def some_context(some_device: Device) -> Context:
     """
     A single-device context initialized with the return value of
     :py:func:`~pytest_grunnur.plugin.some_device`.
     """
-    yield Context.from_devices([some_device])
+    return Context.from_devices([some_device])
 
 
-@pytest.fixture
-def multi_device_set(request: pytest.FixtureRequest) -> Iterator[List[Device]]:
+@pytest.fixture()
+def multi_device_set(request: pytest.FixtureRequest) -> list[Device]:
     """
-    Yields the elements of the return value of :py:func:`~pytest_grunnur.get_multi_device_sets`.
+    Yields the elements of the return value of
+    :py:func:`~pytest_grunnur.get_multi_device_sets`.
     """
-    yield request.param
+    # Set in `pytest_generate_tests()`
+    return cast(list[Device], request.param)
 
 
-@pytest.fixture
-def multi_device_context(multi_device_set: List[Device]) -> Iterator[Context]:
+@pytest.fixture()
+def multi_device_context(multi_device_set: list[Device]) -> Context:
     """
     A multi-device context for each device set yielded by
     :py:func:`~pytest_grunnur.plugin.multi_device_set`.
     """
-    yield Context.from_devices(multi_device_set)
+    return Context.from_devices(multi_device_set)
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -220,12 +216,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     Seeds the parameters for the fixtures provided by this plugin
     (see the fixture list for details).
     """
-
     apis = get_apis(metafunc.config)
     platforms = get_platforms(metafunc.config)
     devices = get_devices(metafunc.config)
 
-    fixtures: List[Tuple[str, List[Any]]] = [
+    fixtures: list[tuple[str, list[Any]]] = [
         ("api", apis),
         ("platform", platforms),
         ("device", devices),
@@ -267,9 +262,9 @@ def pytest_report_header(config: pytest.Config) -> None:
     devices = get_devices(config)
 
     if len(devices) == 0:
-        print("No GPGPU devices available")
+        print("No GPGPU devices available")  # noqa: T201
     else:
-        print("Running tests on:")
+        print("Running tests on:")  # noqa: T201
         for device in sorted(devices, key=lambda device: str(device)):
             platform = device.platform
-            print(f"  {device}: {platform.name}, {device.name}")
+            print(f"  {device}: {platform.name}, {device.name}")  # noqa: T201

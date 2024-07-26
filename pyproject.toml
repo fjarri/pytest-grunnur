@@ -1,6 +1,6 @@
 [project]
 name = "pytest_grunnur"
-version = "0.3.0.dev"
+version = "0.3.0"
 description = "Py.Test plugin for Grunnur-based packages."
 authors = [
     {name = "Bogdan Opanchuk", email = "bogdan@opanchuk.net"},
@@ -32,10 +32,6 @@ lint = [
 
 [project.entry-points.pytest11]
 pytest_grunnur = "pytest_grunnur.plugin"
-
-[tool.black]
-line-length = 100
-target-version = ['py38']
 
 [tool.pdm.build]
 source-includes = [

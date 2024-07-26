@@ -7,7 +7,7 @@ A ``py.test`` plugin for ``grunnur``
 ====================================
 
 This package contains a collection of helpers useful for testing ``grunnur``-based libraries and applications.
-See `the Grunnur docs <https://grunnur.readthedocs.io/en/v0.3.0/>`_ for more details about the main package.
+See `the Grunnur docs <https://grunnur.readthedocs.io/>`_ for more details about the main package.
 
 
 Indices and tables
@@ -72,8 +72,8 @@ Version history
 ===============
 
 
-0.3.0 (Unreleased)
-------------------
+0.3.0 (25 Jul 2024)
+-------------------
 
 Changed
 ^^^^^^^
